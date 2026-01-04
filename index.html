@@ -3,335 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreatorPlan | PWA & Realtime</title>
+    <title>CreatorPlan | Stable</title>
     <meta name="theme-color" content="#6366f1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="Planification de contenu collaborative en temps réel.">
+    <meta name="description" content="Planification de contenu collaborative.">
     
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <style>
         /* ==========================================
-         * 🎨 VARIABLES & RESET
+         * 🎨 CSS CLEAN & RESPONSIVE
          * ==========================================
          */
         :root {
             --primary: #6366f1;
-            --primary-hover: #4f46e5;
             --bg-body: #f3f4f6;
             --bg-card: #ffffff;
-            --bg-column: #f9fafb;
             --text-main: #111827;
             --text-muted: #6b7280;
             --border: #e5e7eb;
             --radius: 12px;
+            --yt: #ef4444; --tt: #000000; --ig: #db2777;
             --safe-bottom: env(safe-area-inset-bottom);
-            
-            /* Status Colors */
-            --yt-color: #ef4444;
-            --tt-color: #000000;
-            --ig-color: #db2777;
-        }
-
-        [data-theme="dark"] {
-            --bg-body: #111827;
-            --bg-card: #1f2937;
-            --bg-column: #18202f;
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-            --border: #374151;
-            --tt-color: #ffffff;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            margin: 0; padding: 0;
-            height: 100vh;
-            display: flex; flex-direction: column;
-            overflow: hidden;
-            user-select: none;
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: var(--bg-body); color: var(--text-main);
+            margin: 0; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; user-select: none;
         }
 
-        /* ==========================================
-         * 🧩 UI COMPONENTS
-         * ==========================================
-         */
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            gap: 0.5rem; padding: 0.6rem 1rem;
-            border-radius: var(--radius);
-            font-weight: 600; font-size: 0.9rem;
-            border: 1px solid var(--border);
-            background: var(--bg-card); color: var(--text-main);
-            cursor: pointer; transition: all 0.2s;
-            touch-action: manipulation;
-        }
-        .btn:active { transform: scale(0.96); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-primary { background: var(--primary); color: white; border: none; }
-        .btn-icon { padding: 0.6rem; border-radius: 50%; }
-
-        input, select, textarea {
-            background: var(--bg-body); border: 1px solid var(--border);
-            color: var(--text-main); padding: 0.8rem;
-            border-radius: var(--radius); width: 100%;
-            font-size: 16px; margin-bottom: 0.5rem;
-        }
-
-        /* ==========================================
-         * 📱 LAYOUT & RESPONSIVE
-         * ==========================================
-         */
+        /* HEADER & TOOLBAR */
         header {
             background: var(--bg-card); padding: 1rem;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border);
             padding-top: max(1rem, env(safe-area-inset-top));
         }
-
-        .logo { font-weight: 800; font-size: 1.2rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .logo { font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
         
         .toolbar {
             padding: 0.5rem 1rem; background: var(--bg-body);
             display: flex; gap: 0.5rem; overflow-x: auto;
             border-bottom: 1px solid var(--border);
-            scrollbar-width: none;
         }
 
-        .board-container {
-            flex: 1; overflow-y: hidden; overflow-x: auto;
-            display: flex; flex-direction: column;
-            background: var(--bg-body);
-        }
-
+        /* BOARD LAYOUT */
+        .board-container { flex: 1; overflow-y: hidden; overflow-x: auto; display: flex; flex-direction: column; }
         .board {
-            display: grid;
-            grid-template-columns: repeat(7, minmax(280px, 1fr));
+            display: grid; grid-template-columns: repeat(7, minmax(280px, 1fr));
             gap: 1rem; padding: 1rem; height: 100%;
         }
-
         @media (max-width: 1024px) {
-            .board {
-                display: flex; flex-direction: row;
-                overflow-x: auto; scroll-snap-type: x mandatory;
-                padding: 1rem 0.5rem; gap: 0.5rem;
-            }
+            .board { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 1rem 0.5rem; }
             .column { min-width: 85vw; scroll-snap-align: center; }
-            .hide-mobile { display: none; }
         }
 
+        /* CARDS & COLUMNS */
         .column {
-            background: var(--bg-column);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            overflow: hidden;
+            background: #f9fafb; border-radius: var(--radius); border: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow: hidden;
         }
-
-        .column-header {
-            padding: 1rem; background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            position: sticky; top: 0; z-index: 2;
-        }
-        .day-name { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-        .day-date { font-size: 1.2rem; font-weight: 700; margin-top: 0.2rem; }
-        .day-date.today { color: var(--primary); }
-
-        .column-content {
-            flex: 1; padding: 0.5rem;
-            overflow-y: auto;
-            display: flex; flex-direction: column; gap: 0.5rem;
-        }
-
-        /* CARD STYLE */
+        .column-header { padding: 1rem; background: #fff; border-bottom: 1px solid var(--border); font-weight: bold; }
+        .column-content { flex: 1; padding: 0.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+        
         .card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 1rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            background: #fff; padding: 1rem; border-radius: var(--radius);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid var(--border);
             border-left: 4px solid transparent;
-            position: relative; transition: transform 0.2s;
         }
-        .card:active { transform: scale(0.98); }
-        .card[data-platform="youtube"] { border-left-color: var(--yt-color); }
-        .card[data-platform="tiktok"] { border-left-color: var(--tt-color); }
-        .card[data-platform="instagram"] { border-left-color: var(--ig-color); }
+        .card[data-platform="youtube"] { border-left-color: var(--yt); }
+        .card[data-platform="tiktok"] { border-left-color: var(--tt); }
+        .card[data-platform="instagram"] { border-left-color: var(--ig); }
 
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
-        .card-title { font-weight: 600; line-height: 1.3; margin-bottom: 0.5rem; }
+        /* UI ELEMENTS */
+        .btn {
+            background: var(--bg-card); border: 1px solid var(--border); padding: 0.5rem 1rem;
+            border-radius: var(--radius); font-weight: 600; cursor: pointer;
+        }
+        .btn-primary { background: var(--primary); color: white; border: none; }
+        .status-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; background: #eee; border-radius: 99px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .dot.online { background: #10b981; } .dot.offline { background: #ef4444; }
 
         /* MODALS */
         .modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            display: flex; justify-content: center; align-items: flex-end;
-            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+            display: flex; justify-content: center; align-items: flex-end; z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
         }
         .modal-overlay.open { opacity: 1; pointer-events: auto; }
-        
         .modal {
-            background: var(--bg-card); width: 100%; max-width: 500px;
-            border-radius: 20px 20px 0 0;
-            max-height: 90vh; overflow-y: auto;
-            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            padding-bottom: var(--safe-bottom);
-        }
-        @media (min-width: 768px) {
-            .modal-overlay { align-items: center; }
-            .modal { border-radius: var(--radius); transform: scale(0.95); width: 90%; }
+            background: #fff; width: 100%; max-width: 500px; padding: 1.5rem;
+            border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s;
+            padding-bottom: max(1.5rem, var(--safe-bottom));
         }
         .modal-overlay.open .modal { transform: translateY(0); }
-        @media (min-width: 768px) { .modal-overlay.open .modal { transform: scale(1); } }
-
-        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-
-        /* STATUS BADGE */
-        .status-badge {
-            font-size: 0.7rem; padding: 0.2rem 0.6rem; border-radius: 20px;
-            background: var(--bg-column); border: 1px solid var(--border);
-            display: flex; align-items: center; gap: 4px;
+        @media(min-width: 768px) {
+            .modal-overlay { align-items: center; }
+            .modal { border-radius: var(--radius); transform: scale(0.95); width: 90%; }
+            .modal-overlay.open .modal { transform: scale(1); }
         }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
-        .dot.online { background: #10b981; box-shadow: 0 0 5px #10b981; }
-        .dot.offline { background: #ef4444; }
 
+        input, select { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: var(--radius); }
+        
         /* TOAST */
         .toast {
             position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
-            background: #1f2937; color: white; padding: 0.8rem 1.5rem;
-            border-radius: 50px; font-size: 0.9rem; z-index: 2000;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none;
-            width: max-content; max-width: 90vw; text-align: center;
+            background: #1f2937; color: white; padding: 0.8rem 1.5rem; border-radius: 50px;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 200;
         }
         .toast.visible { opacity: 1; }
-        
-        /* AUTH HELPERS */
-        .auth-switch { text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem; }
-        .auth-switch span { color: var(--primary); font-weight: 600; cursor: pointer; text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            <span>CreatorPlan</span>
-        </div>
-        
+        <div class="logo">CreatorPlan</div>
         <div style="display:flex; gap:0.5rem; align-items:center;">
-            <div class="status-badge" id="networkStatus">
-                <span class="dot online"></span> <span id="syncText" class="hide-mobile">Sync</span>
-            </div>
-            <button class="btn btn-primary" id="pwaInstallBtn" style="display:none;">Installer</button>
-            <button class="btn btn-icon" id="authBtn">👤</button>
+            <div class="status-badge"><span class="dot online"></span><span id="syncText">Init...</span></div>
+            <button class="btn btn-primary" id="pwaInstallBtn" style="display:none">Installer</button>
+            <button class="btn" id="authBtn">👤</button>
         </div>
     </header>
 
     <div class="toolbar">
         <button class="btn btn-primary" onclick="app.openModal()">+ Nouveau</button>
-        <div class="date-nav" style="display:flex; gap:0.5rem; align-items:center;">
-            <button class="btn btn-icon" id="prevWeek">←</button>
-            <span class="week-display" id="weekDisplay" style="font-weight:600; white-space:nowrap; font-size:0.9rem;">...</span>
-            <button class="btn btn-icon" id="nextWeek">→</button>
-        </div>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="app.weekNav(-1)">←</button>
+        <span id="weekDisplay" style="padding:0 0.5rem; font-weight:bold; font-size:0.9rem">...</span>
+        <button class="btn" onclick="app.weekNav(1)">→</button>
     </div>
 
     <div class="board-container">
-        <div class="board" id="board">
-            </div>
-    </div>
-
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 style="margin:0">Contenu</h3>
-                <button class="btn btn-icon" onclick="app.closeModal()">✕</button>
-            </div>
-            <form id="contentForm" onsubmit="app.saveItem(event)">
-                <input type="hidden" id="itemId">
-                <div class="modal-body">
-                    <label>Titre</label>
-                    <input type="text" id="itemTitle" required placeholder="Idée de vidéo..." autofocus>
-                    
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                        <div>
-                            <label>Plateforme</label>
-                            <select id="itemPlatform">
-                                <option value="youtube">YouTube</option>
-                                <option value="tiktok">TikTok</option>
-                                <option value="instagram">Instagram</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Statut</label>
-                            <select id="itemStatus">
-                                <option value="todo">À faire</option>
-                                <option value="wip">En cours</option>
-                                <option value="published">Publié</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
-                        <div>
-                            <label>Date</label>
-                            <input type="date" id="itemDate" required>
-                        </div>
-                        <div>
-                            <label>Heure</label>
-                            <input type="time" id="itemTime">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer" style="padding:1rem; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:0.5rem;">
-                    <button type="button" class="btn" style="color:var(--yt-color); margin-right:auto;" onclick="app.deleteItem()" id="btnDelete">Supprimer</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                </div>
-            </form>
-        </div>
+        <div class="board" id="board"></div>
     </div>
 
     <div class="modal-overlay" id="authOverlay">
         <div class="modal">
-            <div class="modal-header">
-                <h3 id="authTitle" style="margin:0">Connexion</h3>
-                <button class="btn btn-icon" onclick="auth.close()">✕</button>
-            </div>
-            <form id="authForm" onsubmit="auth.handleSubmit(event)" style="padding:1.5rem;">
-                <input type="email" id="authEmail" placeholder="Votre Email" required autocomplete="email">
+            <h3>Connexion</h3>
+            <form onsubmit="auth.handleSubmit(event)">
+                <input type="email" id="authEmail" placeholder="Email" required autocomplete="email">
                 <input type="password" id="authPassword" placeholder="Mot de passe" required autocomplete="current-password">
-                
-                <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width:100%; margin-top:1rem;">Se connecter</button>
-                
-                <div class="auth-switch">
-                    <p id="authSwitchText">Pas de compte ? <span onclick="auth.toggleMode()">Créer un compte</span></p>
-                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%" id="authSubmitBtn">Se connecter</button>
+            </form>
+            <p style="text-align:center; margin-top:1rem; font-size:0.9rem; color:gray" onclick="auth.toggleMode()" id="authSwitch">Créer un compte</p>
+            <button class="btn" onclick="auth.close()" style="width:100%; margin-top:0.5rem">Fermer</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="contentOverlay">
+        <div class="modal">
+            <h3>Éditer Contenu</h3>
+            <form onsubmit="app.saveItem(event)">
+                <input type="hidden" id="itemId">
+                <input type="text" id="itemTitle" placeholder="Titre" required>
+                <select id="itemPlatform">
+                    <option value="youtube">YouTube</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="instagram">Instagram</option>
+                </select>
+                <select id="itemStatus">
+                    <option value="todo">À faire</option>
+                    <option value="published">Publié</option>
+                </select>
+                <input type="date" id="itemDate" required>
+                <button type="submit" class="btn btn-primary" style="width:100%">Enregistrer</button>
+                <button type="button" class="btn" onclick="app.deleteItem()" id="btnDelete" style="width:100%; margin-top:0.5rem; color:red">Supprimer</button>
+                <button type="button" class="btn" onclick="app.closeModal()" style="width:100%; margin-top:0.5rem">Annuler</button>
             </form>
         </div>
     </div>
 
-    <div id="toast" class="toast">Message info</div>
+    <div id="toast" class="toast">Info</div>
 
     <script>
         /**
          * ==========================================
-         * ⚠️ CONFIGURATION SUPABASE
+         * 1️⃣ CONFIGURATION & NETTOYAGE (CRITIQUE)
          * ==========================================
          */
+        
+        // 🚨 STOPPER LES ZOMBIES : Désenregistre tout SW existant pour stopper l'erreur 429
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    console.log('🗑️ Suppression SW Zombie:', registration);
+                    registration.unregister();
+                }
+            });
+        }
+
+        // Configuration Supabase
         const SUPABASE_URL = 'https://bqhzbgwisadmgwuqdske.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxaHpiZ3dpc2FkbWd3dXFkc2tlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc1MzIzNzIsImV4cCI6MjA4MzEwODM3Mn0.8eQnpL_z4JPTfTZOF7JaLGcxPxSfUt5BXDFxBoO6A_c';
-
-        // Initialisation Client Safe
+        
         let sbClient = null;
-        if (typeof window.supabase !== 'undefined' && SUPABASE_URL.includes('http')) {
-            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        if(typeof supabase !== 'undefined' && SUPABASE_URL.includes('http')) {
+            // Singleton: Une seule instance pour toute l'app
+            sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
                 auth: {
-                    persistSession: true, // Garde la session en local
+                    persistSession: true, // On garde la session
                     autoRefreshToken: true,
                     detectSessionInUrl: true
                 }
@@ -340,154 +214,30 @@
 
         /**
          * ==========================================
-         * 🔧 LOGIQUE AUTHENTIFICATION
-         * ==========================================
-         */
-        const auth = {
-            isLoginMode: true,
-            
-            init() {
-                const overlay = document.getElementById('authOverlay');
-                if(overlay) {
-                    overlay.addEventListener('click', (e) => {
-                        if(e.target.id === 'authOverlay') this.close();
-                    });
-                }
-            },
-
-            open() {
-                if (app.state.user) {
-                    if(confirm("Se déconnecter ?")) {
-                        sbClient.auth.signOut().then(() => window.location.reload());
-                    }
-                    return;
-                }
-                document.getElementById('authOverlay').classList.add('open');
-            },
-
-            close() {
-                document.getElementById('authOverlay').classList.remove('open');
-            },
-
-            toggleMode() {
-                this.isLoginMode = !this.isLoginMode;
-                const title = document.getElementById('authTitle');
-                const btn = document.getElementById('authSubmitBtn');
-                const switchTxt = document.getElementById('authSwitchText');
-                
-                if (this.isLoginMode) {
-                    title.textContent = "Connexion";
-                    btn.textContent = "Se connecter";
-                    switchTxt.innerHTML = 'Pas de compte ? <span onclick="auth.toggleMode()">Créer un compte</span>';
-                } else {
-                    title.textContent = "Inscription";
-                    btn.textContent = "S'inscrire";
-                    switchTxt.innerHTML = 'Déjà un compte ? <span onclick="auth.toggleMode()">Se connecter</span>';
-                }
-            },
-
-            async handleSubmit(e) {
-                e.preventDefault(); // Empêche le reload
-                
-                if (!sbClient) {
-                    alert("Erreur: Supabase non connecté (Clés manquantes ?)");
-                    return;
-                }
-
-                const email = document.getElementById('authEmail').value;
-                const password = document.getElementById('authPassword').value;
-                const btn = document.getElementById('authSubmitBtn');
-                
-                // UX: Loading State
-                const originalText = btn.textContent;
-                btn.textContent = "Chargement...";
-                btn.disabled = true;
-
-                try {
-                    if (this.isLoginMode) {
-                        const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
-                        if (error) throw error;
-                        this.close();
-                        app.showToast("Connexion réussie !");
-                    } else {
-                        const { data, error } = await sbClient.auth.signUp({ email, password });
-                        if (error) throw error;
-                        
-                        if (data?.user && !data.session) {
-                            alert("Compte créé ! Vérifiez vos emails.");
-                            this.toggleMode();
-                        } else {
-                            this.close();
-                            app.showToast("Bienvenue !");
-                        }
-                    }
-                } catch (err) {
-                    console.error(err);
-                    alert("Erreur: " + err.message);
-                } finally {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }
-            }
-        };
-
-        /**
-         * ==========================================
-         * 📱 PWA MANAGER (Version GitHub Pages Safe)
+         * 2️⃣ PWA MANAGER (Version Safe / Sans Blob)
          * ==========================================
          */
         class PWAManager {
             constructor() {
+                // On injecte seulement le manifeste pour l'UI "Add to Homescreen"
+                // On NE tente PAS d'installer un SW via Blob (cause des erreurs)
                 this.initManifest();
-                this.initServiceWorker();
                 this.initInstallButton();
             }
 
             initManifest() {
                 const iconSVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%236366f1'><rect width='512' height='512' rx='100' fill='white'/><rect x='100' y='100' width='312' height='312' rx='50' fill='%236366f1'/></svg>`;
                 const iconUrl = `data:image/svg+xml;base64,${btoa(iconSVG)}`;
-                
                 const manifest = {
-                    name: "CreatorPlan",
-                    short_name: "Plan",
-                    start_url: ".",
-                    display: "standalone",
-                    background_color: "#f3f4f6",
-                    theme_color: "#6366f1",
+                    name: "CreatorPlan", short_name: "Plan",
+                    start_url: ".", display: "standalone",
+                    background_color: "#f3f4f6", theme_color: "#6366f1",
                     icons: [{ src: iconUrl, sizes: "512x512", type: "image/svg+xml" }]
                 };
-
                 const link = document.createElement('link');
                 link.rel = 'manifest';
                 link.href = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
                 document.head.appendChild(link);
-            }
-
-            initServiceWorker() {
-                // Sur GitHub Pages ou navigateurs stricts, les Blobs pour SW sont interdits.
-                // On tente, mais on capture l'erreur silencieusement pour ne pas casser l'app.
-                if ('serviceWorker' in navigator) {
-                    try {
-                        const swCode = `
-                            const CACHE_NAME = 'creatorplan-v3';
-                            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-                            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-                            self.addEventListener('fetch', e => {
-                                // Pas de cache complexe ici pour éviter les erreurs de CORS sur les Blobs
-                                return; 
-                            });
-                        `;
-                        const blob = new Blob([swCode], {type: 'application/javascript'});
-                        const blobUrl = URL.createObjectURL(blob);
-                        
-                        navigator.serviceWorker.register(blobUrl)
-                            .catch(err => {
-                                console.warn("PWA Info: Le mode hors-ligne complet nécessite un fichier sw.js séparé (Restriction navigateur). L'app fonctionne en mode Online.");
-                            });
-                    } catch (e) {
-                        console.warn("PWA: Service Worker ignoré (Restriction Blob).");
-                    }
-                }
             }
 
             initInstallButton() {
@@ -497,188 +247,199 @@
                     this.deferredPrompt = e;
                     if(btn) btn.style.display = 'inline-flex';
                 });
-
-                if(btn) {
-                    btn.addEventListener('click', async () => {
-                        if (this.deferredPrompt) {
-                            this.deferredPrompt.prompt();
-                            const { outcome } = await this.deferredPrompt.userChoice;
-                            if (outcome === 'accepted') btn.style.display = 'none';
-                            this.deferredPrompt = null;
-                        }
-                    });
-                }
+                if(btn) btn.onclick = async () => {
+                    if (this.deferredPrompt) {
+                        this.deferredPrompt.prompt();
+                        const { outcome } = await this.deferredPrompt.userChoice;
+                        if (outcome === 'accepted') btn.style.display = 'none';
+                        this.deferredPrompt = null;
+                    }
+                };
             }
         }
 
         /**
          * ==========================================
-         * 🧠 APP LOGIC
+         * 3️⃣ AUTHENTIFICATION (Gestion Erreurs)
          * ==========================================
          */
-        const Utils = {
-            getMonday: (d) => {
-                d = new Date(d);
-                const day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
-                return new Date(d.setDate(diff));
+        const auth = {
+            isLogin: true,
+            init() {
+                // Listener global sur l'état auth
+                if(sbClient) {
+                    sbClient.auth.onAuthStateChange((event, session) => {
+                        console.log("Auth Event:", event);
+                        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                            app.user = session.user;
+                        } else if (event === 'SIGNED_OUT') {
+                            app.user = null;
+                        }
+                        app.updateUI();
+                        if(event === 'SIGNED_IN') app.fetchData();
+                    });
+                }
             },
-            formatDate: (d) => d.toISOString().split('T')[0],
-            addDays: (d, days) => {
-                const res = new Date(d); res.setDate(res.getDate() + days);
-                return Utils.formatDate(res);
+            toggleMode() {
+                this.isLogin = !this.isLogin;
+                document.getElementById('authSwitch').textContent = this.isLogin ? "Créer un compte" : "Se connecter";
+                document.getElementById('authSubmitBtn').textContent = this.isLogin ? "Se connecter" : "S'inscrire";
             },
-            dayName: (d) => new Date(d).toLocaleDateString('fr-FR', { weekday: 'short' })
+            open() {
+                if(app.user) {
+                    if(confirm("Déconnexion ?")) sbClient.auth.signOut();
+                } else {
+                    document.getElementById('authOverlay').classList.add('open');
+                }
+            },
+            close() { document.getElementById('authOverlay').classList.remove('open'); },
+            async handleSubmit(e) {
+                e.preventDefault();
+                if(!sbClient) return alert("Supabase non configuré");
+
+                const email = document.getElementById('authEmail').value;
+                const password = document.getElementById('authPassword').value;
+                const btn = document.getElementById('authSubmitBtn');
+                
+                btn.disabled = true; btn.textContent = "Chargement...";
+
+                try {
+                    const { data, error } = this.isLogin 
+                        ? await sbClient.auth.signInWithPassword({ email, password })
+                        : await sbClient.auth.signUp({ email, password });
+
+                    if(error) throw error;
+                    
+                    if(!this.isLogin && data?.user && !data.session) {
+                        alert("Inscription réussie ! Vérifiez vos emails.");
+                    } else {
+                        app.showToast(this.isLogin ? "Connecté !" : "Bienvenue !");
+                        this.close();
+                    }
+                } catch(err) {
+                    alert("Erreur: " + err.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = this.isLogin ? "Se connecter" : "S'inscrire";
+                }
+            }
         };
 
-        class App {
-            constructor() {
-                this.state = {
-                    weekStart: Utils.formatDate(Utils.getMonday(new Date())),
-                    items: JSON.parse(localStorage.getItem('cp_items')) || [],
-                    user: null
-                };
-                
+        /**
+         * ==========================================
+         * 4️⃣ APP LOGIC
+         * ==========================================
+         */
+        const app = {
+            user: null,
+            weekStart: new Date(),
+            items: JSON.parse(localStorage.getItem('cp_items')) || [],
+
+            init() {
                 this.pwa = new PWAManager();
-                this.init();
-            }
-
-            async init() {
-                this.render();
-                this.setupListeners();
+                this.setMonday(new Date());
                 auth.init();
+                this.render();
                 
-                const modalOverlay = document.getElementById('modalOverlay');
-                if(modalOverlay) {
-                    modalOverlay.addEventListener('click', (e) => {
-                        if (e.target.id === 'modalOverlay') this.closeModal();
-                    });
-                }
+                document.getElementById('authBtn').onclick = () => auth.open();
+                
+                // Gestion Online/Offline simple
+                window.addEventListener('online', () => this.updateUI());
+                window.addEventListener('offline', () => this.updateUI());
+            },
 
-                window.addEventListener('online', () => this.updateNetwork(true));
-                window.addEventListener('offline', () => this.updateNetwork(false));
+            setMonday(d) {
+                const day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
+                this.weekStart = new Date(d.setDate(diff));
+                this.weekStart.setHours(0,0,0,0);
+                this.render();
+            },
 
-                if (sbClient) {
-                    // Vérification de session avec gestion d'erreur (évite le crash si 429)
-                    try {
-                        const { data } = await sbClient.auth.getSession();
-                        if (data.session) this.handleUser(data.session.user);
-                    } catch (err) {
-                        console.log("Session init error (probablement 429, attente requise)", err);
-                    }
-                    
-                    sbClient.auth.onAuthStateChange((_evt, session) => {
-                        this.handleUser(session?.user);
-                    });
-                }
-            }
+            weekNav(dir) {
+                const d = new Date(this.weekStart);
+                d.setDate(d.getDate() + (dir * 7));
+                this.setMonday(d);
+            },
 
-            updateNetwork(isOnline) {
+            updateUI() {
+                const isOnline = navigator.onLine;
+                const status = document.getElementById('syncText');
                 const dot = document.querySelector('.dot');
-                const txt = document.getElementById('syncText');
-                if(dot) dot.className = `dot ${isOnline ? 'online' : 'offline'}`;
-                if(txt) txt.textContent = isOnline ? (this.state.user ? 'Cloud' : 'Local') : 'Offline';
-            }
-
-            handleUser(user) {
-                this.state.user = user;
                 const authBtn = document.getElementById('authBtn');
+
+                dot.className = `dot ${isOnline ? 'online' : 'offline'}`;
                 
-                if (user) {
-                    if(authBtn) {
-                        authBtn.innerHTML = '🟢'; 
-                        authBtn.title = "Déconnexion";
-                    }
-                    this.updateNetwork(navigator.onLine);
-                    this.fetchData();
-                    this.setupRealtime();
-                } else {
-                    if(authBtn) {
-                        authBtn.innerHTML = '👤'; 
-                        authBtn.title = "Connexion";
-                    }
-                    this.updateNetwork(navigator.onLine);
-                }
-            }
+                if(!isOnline) status.textContent = "Offline";
+                else status.textContent = this.user ? "Cloud Sync" : "Local";
+
+                authBtn.textContent = this.user ? "🟢" : "👤";
+            },
 
             async fetchData() {
-                if(!this.state.user || !sbClient) return;
+                if(!this.user || !sbClient) return;
+                // Protection basique contre le spam
                 const { data, error } = await sbClient.from('content_items').select('*');
-                if (data) {
-                    this.state.items = data;
+                if(!error && data) {
+                    this.items = data;
                     localStorage.setItem('cp_items', JSON.stringify(data));
                     this.render();
                 }
-            }
-
-            setupRealtime() {
-                if(!sbClient || !this.state.user) return;
-                
-                sbClient.channel('public:content_items')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'content_items' }, payload => {
-                    const { eventType, new: newItem, old: oldItem } = payload;
-                    if (newItem && newItem.user_id === this.state.user.id) return; 
-
-                    if (eventType === 'INSERT' || eventType === 'UPDATE') {
-                        const idx = this.state.items.findIndex(i => i.id === newItem.id);
-                        if (idx > -1) this.state.items[idx] = newItem;
-                        else this.state.items.push(newItem);
-                        this.showToast("Planning mis à jour !");
-                    } else if (eventType === 'DELETE') {
-                        this.state.items = this.state.items.filter(i => i.id !== oldItem.id);
-                        this.showToast("Contenu supprimé par collaborateur");
-                    }
-                    this.render();
-                })
-                .subscribe();
-            }
+            },
 
             render() {
                 const board = document.getElementById('board');
-                if(!board) return;
                 board.innerHTML = '';
                 
-                const start = new Date(this.state.weekStart);
-                const end = new Date(start); end.setDate(end.getDate()+6);
-                const weekDisplay = document.getElementById('weekDisplay');
-                if(weekDisplay) weekDisplay.textContent = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
+                const end = new Date(this.weekStart); end.setDate(end.getDate() + 6);
+                document.getElementById('weekDisplay').textContent = 
+                    `${this.weekStart.getDate()}/${this.weekStart.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
 
-                for (let i = 0; i < 7; i++) {
-                    const dateStr = Utils.addDays(this.state.weekStart, i);
-                    const isToday = dateStr === Utils.formatDate(new Date());
-                    
+                for(let i=0; i<7; i++) {
+                    const d = new Date(this.weekStart); d.setDate(d.getDate() + i);
+                    const dateStr = d.toISOString().split('T')[0];
+                    const dayItems = this.items.filter(it => it.date === dateStr);
+
                     const col = document.createElement('div');
                     col.className = 'column';
-                    
-                    const dayItems = this.state.items.filter(item => item.date === dateStr);
-                    
                     col.innerHTML = `
                         <div class="column-header">
-                            <div class="day-name">${Utils.dayName(dateStr)}</div>
-                            <div class="day-date ${isToday ? 'today' : ''}">${new Date(dateStr).getDate()}</div>
+                            ${d.toLocaleDateString('fr-FR', {weekday:'short'})} ${d.getDate()}
                         </div>
-                        <div class="column-content" data-date="${dateStr}"></div>
+                        <div class="column-content"></div>
                     `;
                     
-                    const contentDiv = col.querySelector('.column-content');
+                    const container = col.querySelector('.column-content');
                     dayItems.forEach(item => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.dataset.platform = item.platform;
-                        card.onclick = () => this.openModal(item.id);
-                        card.innerHTML = `
-                            <div class="card-header">
-                                <span style="font-size:0.8rem; opacity:0.7">${item.time || ''}</span>
-                            </div>
-                            <div class="card-title">${item.title}</div>
-                            <div class="status-badge" style="width:fit-content">${item.status}</div>
-                        `;
-                        contentDiv.appendChild(card);
+                        const el = document.createElement('div');
+                        el.className = 'card';
+                        el.dataset.platform = item.platform;
+                        el.innerHTML = `<div>${item.title}</div><div class="status-badge">${item.status}</div>`;
+                        el.onclick = () => this.openModal(item);
+                        container.appendChild(el);
                     });
-                    
                     board.appendChild(col);
                 }
-            }
+            },
 
+            // CRUD UI Helpers
+            openModal(item = null) {
+                document.getElementById('contentOverlay').classList.add('open');
+                const f = document.querySelector('#contentOverlay form');
+                f.reset();
+                document.getElementById('btnDelete').style.display = item ? 'block' : 'none';
+                
+                if(item) {
+                    document.getElementById('itemId').value = item.id;
+                    document.getElementById('itemTitle').value = item.title;
+                    document.getElementById('itemPlatform').value = item.platform;
+                    document.getElementById('itemStatus').value = item.status;
+                    document.getElementById('itemDate').value = item.date;
+                } else {
+                    document.getElementById('itemId').value = '';
+                    document.getElementById('itemDate').value = this.weekStart.toISOString().split('T')[0];
+                }
+            },
+            closeModal() { document.getElementById('contentOverlay').classList.remove('open'); },
+            
             async saveItem(e) {
                 e.preventDefault();
                 const id = document.getElementById('itemId').value;
@@ -688,88 +449,40 @@
                     platform: document.getElementById('itemPlatform').value,
                     status: document.getElementById('itemStatus').value,
                     date: document.getElementById('itemDate').value,
-                    time: document.getElementById('itemTime').value,
-                    user_id: this.state.user?.id
+                    user_id: this.user?.id
                 };
 
-                const idx = this.state.items.findIndex(i => i.id === item.id);
-                if (idx > -1) this.state.items[idx] = item;
-                else this.state.items.push(item);
-                
-                localStorage.setItem('cp_items', JSON.stringify(this.state.items));
+                // Optimistic Update
+                const idx = this.items.findIndex(i => i.id === item.id);
+                if(idx > -1) this.items[idx] = item; else this.items.push(item);
+                localStorage.setItem('cp_items', JSON.stringify(this.items));
                 this.render();
                 this.closeModal();
 
-                if (this.state.user && sbClient) {
+                if(this.user && sbClient) {
                     await sbClient.from('content_items').upsert(item);
                 }
-            }
-
+            },
+            
             async deleteItem() {
+                if(!confirm("Supprimer ?")) return;
                 const id = document.getElementById('itemId').value;
-                if (!confirm("Supprimer ?")) return;
-                
-                this.state.items = this.state.items.filter(i => i.id !== id);
-                localStorage.setItem('cp_items', JSON.stringify(this.state.items));
+                this.items = this.items.filter(i => i.id !== id);
+                localStorage.setItem('cp_items', JSON.stringify(this.items));
                 this.render();
                 this.closeModal();
-
-                if (this.state.user && sbClient) {
-                    await sbClient.from('content_items').delete().eq('id', id);
-                }
-            }
-
-            openModal(id = null) {
-                document.getElementById('modalOverlay').classList.add('open');
-                const form = document.getElementById('contentForm');
-                form.reset();
-                document.getElementById('itemDate').value = this.state.weekStart;
-                const delBtn = document.getElementById('btnDelete');
-                if(delBtn) delBtn.style.display = 'none';
-
-                if (id) {
-                    const item = this.state.items.find(i => i.id === id);
-                    if (item) {
-                        document.getElementById('itemId').value = item.id;
-                        document.getElementById('itemTitle').value = item.title;
-                        document.getElementById('itemPlatform').value = item.platform;
-                        document.getElementById('itemStatus').value = item.status;
-                        document.getElementById('itemDate').value = item.date;
-                        document.getElementById('itemTime').value = item.time;
-                        if(delBtn) delBtn.style.display = 'block';
-                    }
-                }
-            }
-
-            closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
-
+                if(this.user && sbClient) await sbClient.from('content_items').delete().eq('id', id);
+            },
+            
             showToast(msg) {
                 const t = document.getElementById('toast');
-                if(!t) return;
-                t.textContent = msg;
-                t.classList.add('visible');
+                t.textContent = msg; t.classList.add('visible');
                 setTimeout(() => t.classList.remove('visible'), 3000);
             }
+        };
 
-            setupListeners() {
-                const prev = document.getElementById('prevWeek');
-                const next = document.getElementById('nextWeek');
-                const authBtn = document.getElementById('authBtn');
-
-                if(prev) prev.onclick = () => {
-                    const d = new Date(this.state.weekStart); d.setDate(d.getDate() - 7);
-                    this.state.weekStart = Utils.formatDate(d); this.render();
-                };
-                if(next) next.onclick = () => {
-                    const d = new Date(this.state.weekStart); d.setDate(d.getDate() + 7);
-                    this.state.weekStart = Utils.formatDate(d); this.render();
-                };
-                if(authBtn) authBtn.onclick = () => auth.open();
-            }
-        }
-
-        const app = new App();
+        // Init App
+        app.init();
     </script>
 </body>
-
 </html>

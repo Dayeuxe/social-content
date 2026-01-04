@@ -320,8 +320,7 @@
     <script>
         /**
          * ==========================================
-         * ⚠️ CONFIGURATION SUPABASE OBLIGATOIRE
-         * Remplacez par vos clés API
+         * ⚠️ CONFIGURATION SUPABASE
          * ==========================================
          */
         const SUPABASE_URL = 'https://bqhzbgwisadmgwuqdske.supabase.co';
@@ -330,9 +329,13 @@
         // Initialisation Client Safe
         let sbClient = null;
         if (typeof window.supabase !== 'undefined' && SUPABASE_URL.includes('http')) {
-            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } else {
-            console.warn("Supabase non configuré ou librairie manquante.");
+            sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                auth: {
+                    persistSession: true, // Garde la session en local
+                    autoRefreshToken: true,
+                    detectSessionInUrl: true
+                }
+            });
         }
 
         /**
@@ -344,18 +347,18 @@
             isLoginMode: true,
             
             init() {
-                // Fermeture au clic sur l'overlay
-                document.getElementById('authOverlay').addEventListener('click', (e) => {
-                    if(e.target.id === 'authOverlay') this.close();
-                });
+                const overlay = document.getElementById('authOverlay');
+                if(overlay) {
+                    overlay.addEventListener('click', (e) => {
+                        if(e.target.id === 'authOverlay') this.close();
+                    });
+                }
             },
 
             open() {
-                // Si déjà connecté, on déconnecte
                 if (app.state.user) {
                     if(confirm("Se déconnecter ?")) {
-                        sbClient.auth.signOut();
-                        window.location.reload();
+                        sbClient.auth.signOut().then(() => window.location.reload());
                     }
                     return;
                 }
@@ -384,8 +387,7 @@
             },
 
             async handleSubmit(e) {
-                // FIX: EMPÊCHER LE RELOAD IMMÉDIATEMENT
-                e.preventDefault(); 
+                e.preventDefault(); // Empêche le reload
                 
                 if (!sbClient) {
                     alert("Erreur: Supabase non connecté (Clés manquantes ?)");
@@ -403,21 +405,17 @@
 
                 try {
                     if (this.isLoginMode) {
-                        // CONNEXION
-                        const { error } = await sbClient.auth.signInWithPassword({ email, password });
+                        const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
                         if (error) throw error;
                         this.close();
                         app.showToast("Connexion réussie !");
-                        
                     } else {
-                        // INSCRIPTION
-                        const { error, data } = await sbClient.auth.signUp({ email, password });
+                        const { data, error } = await sbClient.auth.signUp({ email, password });
                         if (error) throw error;
                         
-                        // FIX: Gestion confirmation email
                         if (data?.user && !data.session) {
-                            alert("Compte créé ! Veuillez vérifier vos emails pour confirmer l'inscription avant de vous connecter.");
-                            this.toggleMode(); // Basculer vers login
+                            alert("Compte créé ! Vérifiez vos emails.");
+                            this.toggleMode();
                         } else {
                             this.close();
                             app.showToast("Bienvenue !");
@@ -435,28 +433,30 @@
 
         /**
          * ==========================================
-         * 📱 PWA MANAGER (Service Worker Safe)
+         * 📱 PWA MANAGER (Version GitHub Pages Safe)
          * ==========================================
          */
         class PWAManager {
             constructor() {
                 this.initManifest();
-                // FIX: Try-catch pour éviter crash en local file://
-                try {
-                    this.initServiceWorker();
-                } catch(e) { console.log("SW non supporté ici"); }
+                this.initServiceWorker();
                 this.initInstallButton();
             }
 
             initManifest() {
                 const iconSVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%236366f1'><rect width='512' height='512' rx='100' fill='white'/><rect x='100' y='100' width='312' height='312' rx='50' fill='%236366f1'/></svg>`;
                 const iconUrl = `data:image/svg+xml;base64,${btoa(iconSVG)}`;
+                
                 const manifest = {
-                    name: "CreatorPlan", short_name: "Plan",
-                    start_url: ".", display: "standalone",
-                    background_color: "#f3f4f6", theme_color: "#6366f1",
+                    name: "CreatorPlan",
+                    short_name: "Plan",
+                    start_url: ".",
+                    display: "standalone",
+                    background_color: "#f3f4f6",
+                    theme_color: "#6366f1",
                     icons: [{ src: iconUrl, sizes: "512x512", type: "image/svg+xml" }]
                 };
+
                 const link = document.createElement('link');
                 link.rel = 'manifest';
                 link.href = `data:application/manifest+json,${encodeURIComponent(JSON.stringify(manifest))}`;
@@ -464,18 +464,29 @@
             }
 
             initServiceWorker() {
-                if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                    const swCode = `
-                        const CACHE_NAME = 'creatorplan-v2'; // Version bump
-                        self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
-                        self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
-                        self.addEventListener('fetch', e => {
-                            e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-                        });
-                    `;
-                    const blob = new Blob([swCode], {type: 'application/javascript'});
-                    navigator.serviceWorker.register(URL.createObjectURL(blob))
-                        .catch(err => console.log('SW Warning:', err));
+                // Sur GitHub Pages ou navigateurs stricts, les Blobs pour SW sont interdits.
+                // On tente, mais on capture l'erreur silencieusement pour ne pas casser l'app.
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const swCode = `
+                            const CACHE_NAME = 'creatorplan-v3';
+                            self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+                            self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                            self.addEventListener('fetch', e => {
+                                // Pas de cache complexe ici pour éviter les erreurs de CORS sur les Blobs
+                                return; 
+                            });
+                        `;
+                        const blob = new Blob([swCode], {type: 'application/javascript'});
+                        const blobUrl = URL.createObjectURL(blob);
+                        
+                        navigator.serviceWorker.register(blobUrl)
+                            .catch(err => {
+                                console.warn("PWA Info: Le mode hors-ligne complet nécessite un fichier sw.js séparé (Restriction navigateur). L'app fonctionne en mode Online.");
+                            });
+                    } catch (e) {
+                        console.warn("PWA: Service Worker ignoré (Restriction Blob).");
+                    }
                 }
             }
 
@@ -484,16 +495,19 @@
                 window.addEventListener('beforeinstallprompt', (e) => {
                     e.preventDefault();
                     this.deferredPrompt = e;
-                    btn.style.display = 'inline-flex';
+                    if(btn) btn.style.display = 'inline-flex';
                 });
-                btn.addEventListener('click', async () => {
-                    if (this.deferredPrompt) {
-                        this.deferredPrompt.prompt();
-                        const { outcome } = await this.deferredPrompt.userChoice;
-                        if (outcome === 'accepted') btn.style.display = 'none';
-                        this.deferredPrompt = null;
-                    }
-                });
+
+                if(btn) {
+                    btn.addEventListener('click', async () => {
+                        if (this.deferredPrompt) {
+                            this.deferredPrompt.prompt();
+                            const { outcome } = await this.deferredPrompt.userChoice;
+                            if (outcome === 'accepted') btn.style.display = 'none';
+                            this.deferredPrompt = null;
+                        }
+                    });
+                }
             }
         }
 
@@ -533,17 +547,24 @@
                 this.setupListeners();
                 auth.init();
                 
-                // UX: Click outside modal to close
-                document.getElementById('modalOverlay').addEventListener('click', (e) => {
-                    if (e.target.id === 'modalOverlay') this.closeModal();
-                });
+                const modalOverlay = document.getElementById('modalOverlay');
+                if(modalOverlay) {
+                    modalOverlay.addEventListener('click', (e) => {
+                        if (e.target.id === 'modalOverlay') this.closeModal();
+                    });
+                }
 
                 window.addEventListener('online', () => this.updateNetwork(true));
                 window.addEventListener('offline', () => this.updateNetwork(false));
 
                 if (sbClient) {
-                    const { data } = await sbClient.auth.getSession();
-                    if (data.session) this.handleUser(data.session.user);
+                    // Vérification de session avec gestion d'erreur (évite le crash si 429)
+                    try {
+                        const { data } = await sbClient.auth.getSession();
+                        if (data.session) this.handleUser(data.session.user);
+                    } catch (err) {
+                        console.log("Session init error (probablement 429, attente requise)", err);
+                    }
                     
                     sbClient.auth.onAuthStateChange((_evt, session) => {
                         this.handleUser(session?.user);
@@ -554,8 +575,8 @@
             updateNetwork(isOnline) {
                 const dot = document.querySelector('.dot');
                 const txt = document.getElementById('syncText');
-                dot.className = `dot ${isOnline ? 'online' : 'offline'}`;
-                txt.textContent = isOnline ? (this.state.user ? 'Cloud' : 'Local') : 'Offline';
+                if(dot) dot.className = `dot ${isOnline ? 'online' : 'offline'}`;
+                if(txt) txt.textContent = isOnline ? (this.state.user ? 'Cloud' : 'Local') : 'Offline';
             }
 
             handleUser(user) {
@@ -563,21 +584,25 @@
                 const authBtn = document.getElementById('authBtn');
                 
                 if (user) {
-                    authBtn.innerHTML = '🟢'; // Connecté
-                    authBtn.title = "Déconnexion";
+                    if(authBtn) {
+                        authBtn.innerHTML = '🟢'; 
+                        authBtn.title = "Déconnexion";
+                    }
                     this.updateNetwork(navigator.onLine);
                     this.fetchData();
                     this.setupRealtime();
                 } else {
-                    authBtn.innerHTML = '👤'; // Déconnecté
-                    authBtn.title = "Connexion";
+                    if(authBtn) {
+                        authBtn.innerHTML = '👤'; 
+                        authBtn.title = "Connexion";
+                    }
                     this.updateNetwork(navigator.onLine);
                 }
             }
 
             async fetchData() {
-                if(!this.state.user) return;
-                const { data } = await sbClient.from('content_items').select('*');
+                if(!this.state.user || !sbClient) return;
+                const { data, error } = await sbClient.from('content_items').select('*');
                 if (data) {
                     this.state.items = data;
                     localStorage.setItem('cp_items', JSON.stringify(data));
@@ -586,6 +611,8 @@
             }
 
             setupRealtime() {
+                if(!sbClient || !this.state.user) return;
+                
                 sbClient.channel('public:content_items')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'content_items' }, payload => {
                     const { eventType, new: newItem, old: oldItem } = payload;
@@ -607,11 +634,13 @@
 
             render() {
                 const board = document.getElementById('board');
+                if(!board) return;
                 board.innerHTML = '';
                 
                 const start = new Date(this.state.weekStart);
                 const end = new Date(start); end.setDate(end.getDate()+6);
-                document.getElementById('weekDisplay').textContent = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
+                const weekDisplay = document.getElementById('weekDisplay');
+                if(weekDisplay) weekDisplay.textContent = `${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1}`;
 
                 for (let i = 0; i < 7; i++) {
                     const dateStr = Utils.addDays(this.state.weekStart, i);
@@ -695,7 +724,8 @@
                 const form = document.getElementById('contentForm');
                 form.reset();
                 document.getElementById('itemDate').value = this.state.weekStart;
-                document.getElementById('btnDelete').style.display = 'none';
+                const delBtn = document.getElementById('btnDelete');
+                if(delBtn) delBtn.style.display = 'none';
 
                 if (id) {
                     const item = this.state.items.find(i => i.id === id);
@@ -706,7 +736,7 @@
                         document.getElementById('itemStatus').value = item.status;
                         document.getElementById('itemDate').value = item.date;
                         document.getElementById('itemTime').value = item.time;
-                        document.getElementById('btnDelete').style.display = 'block';
+                        if(delBtn) delBtn.style.display = 'block';
                     }
                 }
             }
@@ -715,25 +745,31 @@
 
             showToast(msg) {
                 const t = document.getElementById('toast');
+                if(!t) return;
                 t.textContent = msg;
                 t.classList.add('visible');
                 setTimeout(() => t.classList.remove('visible'), 3000);
             }
 
             setupListeners() {
-                document.getElementById('prevWeek').onclick = () => {
+                const prev = document.getElementById('prevWeek');
+                const next = document.getElementById('nextWeek');
+                const authBtn = document.getElementById('authBtn');
+
+                if(prev) prev.onclick = () => {
                     const d = new Date(this.state.weekStart); d.setDate(d.getDate() - 7);
                     this.state.weekStart = Utils.formatDate(d); this.render();
                 };
-                document.getElementById('nextWeek').onclick = () => {
+                if(next) next.onclick = () => {
                     const d = new Date(this.state.weekStart); d.setDate(d.getDate() + 7);
                     this.state.weekStart = Utils.formatDate(d); this.render();
                 };
-                document.getElementById('authBtn').onclick = () => auth.open();
+                if(authBtn) authBtn.onclick = () => auth.open();
             }
         }
 
         const app = new App();
     </script>
 </body>
+
 </html>
